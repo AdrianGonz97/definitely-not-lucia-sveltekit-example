@@ -4,7 +4,6 @@ import { generateRandomString } from '@oslojs/crypto/random';
 import { encodeBase32LowerCaseNoPadding, encodeHexLowerCase } from '@oslojs/encoding';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
-import type { RandomReader } from '@oslojs/crypto/random';
 
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
 
@@ -16,15 +15,9 @@ function generateSessionToken(): string {
 	return token;
 }
 
-const random: RandomReader = {
-	read(bytes: Uint8Array): void {
-		crypto.getRandomValues(bytes);
-	}
-};
-
 export function generateId(length: number): string {
 	const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
-	return generateRandomString(random, alphabet, length);
+	return generateRandomString({ read: (bytes) => crypto.getRandomValues(bytes) }, alphabet, length);
 }
 
 export async function createSession(userId: string): Promise<table.Session> {
@@ -39,11 +32,9 @@ export async function createSession(userId: string): Promise<table.Session> {
 	return session;
 }
 
-export type SessionValidationResult =
-	| { session: table.Session; user: Omit<table.User, 'passwordHash'> }
-	| { session: null; user: null };
+export type SessionValidationResult = Awaited<ReturnType<typeof validateSession>>;
 
-export async function validateSession(sessionId: string): Promise<SessionValidationResult> {
+export async function validateSession(sessionId: string) {
 	const [result] = await db
 		.select({
 			// Adjust user table here to tweak returned data

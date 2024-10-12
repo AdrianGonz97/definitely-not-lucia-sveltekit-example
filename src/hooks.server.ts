@@ -10,21 +10,21 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return resolve(event);
 	}
 
-	const userData = await auth.validateSession(sessionId);
-	if (userData.session) {
-		event.cookies.set(auth.sessionCookieName, userData.session.id, {
+	const { session, user } = await auth.validateSession(sessionId);
+	if (session) {
+		event.cookies.set(auth.sessionCookieName, session.id, {
 			path: '/',
 			sameSite: 'lax',
 			httpOnly: true,
-			expires: userData.session.expiresAt,
+			expires: session.expiresAt,
 			secure: !dev
 		});
 	} else {
 		event.cookies.delete(auth.sessionCookieName, { path: '/' });
 	}
 
-	event.locals.user = userData.user;
-	event.locals.session = userData.session;
+	event.locals.user = user;
+	event.locals.session = session;
 
 	return resolve(event);
 };
